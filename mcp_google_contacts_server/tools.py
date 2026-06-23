@@ -25,14 +25,17 @@ def init_service() -> Optional[GoogleContactsService]:
     try:
         # First try environment variables
         try:
+            print("Checking environment variables for credentials...")
             contacts_service = GoogleContactsService.from_env()
             print("Successfully loaded credentials from environment variables.")
             return contacts_service
-        except GoogleContactsError:
-            pass
+        except GoogleContactsError as e:
+            print(f"Environment credentials not found or invalid: {e}")
             
         # Then try default file locations
+        print(f"Checking default credentials paths: {config.credentials_paths}")
         for path in config.credentials_paths:
+            print(f"Checking path: {path} (Exists: {path.exists()})")
             if path.exists():
                 try:
                     print(f"Found credentials file at {path}")

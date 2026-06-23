@@ -50,6 +50,10 @@ def parse_args():
         "--credentials-file",
         help="Path to Google OAuth credentials.json file"
     )
+    parser.add_argument(
+        "--token-file",
+        help="Path to the token.json file"
+    )
     
     return parser.parse_args()
 
@@ -67,6 +71,15 @@ def main():
     if args.refresh_token:
         os.environ["GOOGLE_REFRESH_TOKEN"] = args.refresh_token
     
+    # Handle token file argument
+    if args.token_file:
+        token_path = Path(args.token_file)
+        if token_path.exists():
+            config.token_path = token_path
+            print(f"Using token file: {token_path}")
+        else:
+            print(f"Warning: Specified token file {token_path} not found")
+
     # Handle credentials file argument
     if args.credentials_file:
         credentials_path = Path(args.credentials_file)
@@ -78,7 +91,7 @@ def main():
             print(f"Warning: Specified credentials file {credentials_path} not found")
     
     # Initialize FastMCP server
-    mcp = FastMCP("google-contacts")
+    mcp = FastMCP("google-contacts", host=args.host, port=args.port)
     
     # Register all tools
     register_tools(mcp)
@@ -98,7 +111,7 @@ def main():
         mcp.run(transport='stdio')
     else:
         print(f"Running with HTTP transport on {args.host}:{args.port}")
-        mcp.run(transport='http', host=args.host, port=args.port)
+        mcp.run(transport='streamable-http')
 
 if __name__ == "__main__":
     main()

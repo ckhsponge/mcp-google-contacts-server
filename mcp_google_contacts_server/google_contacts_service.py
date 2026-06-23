@@ -101,18 +101,28 @@ class GoogleContactsService:
             creds = None
             token_path = self.token_path
             
+            print(f"Starting authentication. Token path: {token_path}")
+            
             # Ensure token directory exists
             token_path.parent.mkdir(parents=True, exist_ok=True)
             
             # Check if we have existing token
             if token_path.exists():
-                with open(token_path, 'r') as token_file:
-                    creds = Credentials.from_authorized_user_info(
-                        json.load(token_file), config.scopes)
+                print(f"Token file exists at {token_path}. Attempting to load...")
+                try:
+                    with open(token_path, 'r') as token_file:
+                        creds = Credentials.from_authorized_user_info(
+                            json.load(token_file), config.scopes)
+                    print(f"Token loaded. Valid: {creds.valid if creds else 'N/A'}, Expired: {creds.expired if creds else 'N/A'}")
+                except Exception as e:
+                    print(f"Error loading token file: {e}")
+            else:
+                print(f"No token file found at {token_path}")
             
             # Check for refresh token in environment
             refresh_token = os.environ.get("GOOGLE_REFRESH_TOKEN") or config.google_refresh_token
             if not creds and refresh_token and self.credentials_info:
+                print("No valid token from file, but refresh token found. Attempting to use refresh token...")
                 client_id = self.credentials_info["installed"]["client_id"]
                 client_secret = self.credentials_info["installed"]["client_secret"]
                 
@@ -124,22 +134,29 @@ class GoogleContactsService:
                     client_secret=client_secret,
                     scopes=config.scopes
                 )
+                print("Credentials created from refresh token.")
             
             # If credentials don't exist or are invalid, go through auth flow
             if not creds or not creds.valid:
                 if creds and creds.expired and creds.refresh_token:
+                    print("Credentials expired. Attempting to refresh...")
                     creds.refresh(Request())
+                    print("Credentials refreshed successfully.")
                 else:
                     if not self.credentials_info:
+                        print("No credentials info provided. Cannot perform OAuth flow.")
                         raise GoogleContactsError(
                             "No valid credentials found and no credentials info provided for authentication."
                         )
                     
+                    print("Triggering interactive OAuth flow (browser will open)...")
                     flow = InstalledAppFlow.from_client_config(
                         self.credentials_info, config.scopes)
                     creds = flow.run_local_server(port=0)
+                    print("OAuth flow completed.")
                 
                 # Save the credentials for future use
+                print(f"Saving new credentials to {token_path}...")
                 with open(token_path, 'w') as token:
                     token.write(creds.to_json())
                     
@@ -148,6 +165,7 @@ class GoogleContactsService:
                     print("\nNew refresh token obtained. Consider setting this in your environment:")
                     print(f"GOOGLE_REFRESH_TOKEN={creds.refresh_token}\n")
             
+            print("Authentication successful.")
             # Build and return the Google Contacts service
             return build('people', 'v1', credentials=creds)
         

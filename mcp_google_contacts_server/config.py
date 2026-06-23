@@ -43,12 +43,16 @@ def load_config() -> ContactsConfig:
     default_paths = [
         Path.home() / ".config" / "google" / "credentials.json",
         Path.home() / "google_credentials.json",
-        Path(__file__).parent / "credentials.json"
+        Path(__file__).parent / "credentials.json",
+        Path.cwd() / "credentials.json"
     ]
     
     # Create token directory if it doesn't exist
     token_dir = Path.home() / ".config" / "google-contacts-mcp"
     token_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"Configured default credentials paths: {default_paths}")
+    print(f"Configured token path: {token_dir / 'token.json'}")
     
     return ContactsConfig(
         google_client_id=os.environ.get("GOOGLE_CLIENT_ID"),
